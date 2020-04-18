@@ -41,7 +41,5 @@ export function getHierarchyData(
           .map((pack) => pack.toHierarchy())
       };
     })
-    .sort(
-      (a, b) => (b.nodeModulesSize as number) - (a.nodeModulesSize as number)
-    );
+    .sort((a, b) => b.chunkSize - a.chunkSize);
 }

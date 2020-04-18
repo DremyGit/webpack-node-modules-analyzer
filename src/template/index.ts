@@ -15,9 +15,7 @@ window.onload = (): void => {
   window.data.forEach(function (chunkData, index) {
     const option = document.createElement('option');
     option.value = index.toString();
-    option.innerText = `${chunkData.name} (${withUnit(
-      chunkData.nodeModulesSize
-    )})`;
+    option.innerText = `${chunkData.name} (${withUnit(chunkData.chunkSize)})`;
     select.appendChild(option);
   });
 

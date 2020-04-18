@@ -45,7 +45,10 @@ export default class SunburstView {
           animation: 'sector-path-update'
         }
       })
-      .state({ active: { style: { stroke: 'rgba(0,0,0,.3)' } } });
+      .state({
+        active: { style: { stroke: 'rgba(0,0,0,.3)' } },
+        inactive: { style: { fillOpacity: 0.55 } }
+      });
 
     this.view.removeInteraction('element-active');
     this.view.interaction('chunk-active');
