@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webpack bundle node_modules analyzer</title>
+  <script src="https://gw.alipayobjects.com/os/lib/antv/g2/4.0.6/dist/g2.min.js"></script>
+  <script src="https://gw.alipayobjects.com/os/antv/pkg/_antv.data-set-0.11.1/dist/data-set.js"></script>
+  <style>#chunks{width:300px;}</style>
+</head>
+<body>
+  <select id="chunks"></select>
+  <div id="chart"></div>
+  <script>
+    var data = <% if (debugData) { %><%= JSON.stringify(debugData) %><% } else { %>[/* data */]<% } %>;
+  </script>
+</body>
+</html>
