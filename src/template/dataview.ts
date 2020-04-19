@@ -30,6 +30,7 @@ export default class ChunkDataView {
 
     return view
       .getAllNodes()
+      .filter(({ value }) => value !== 0)
       .map<ChartDataItem>(({ data, depth, value, x, y, parent }) => {
         const dataItem: BaseChartDataItem = {
           name: data.name,

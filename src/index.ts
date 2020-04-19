@@ -1,11 +1,107 @@
-import { Stats, ReportData, ChunkSizeInfo, ReportDataItem } from './types';
+import { readFileSync, writeFileSync } from 'fs';
+import path from 'path';
+import chalk from 'chalk';
+import {
+  Stats,
+  ReportData,
+  ChunkSizeInfo,
+  ReportDataItem,
+  PackageSizeInfo
+} from './types';
 import { Package } from './package';
 import {
   genParsedSizeMap,
   genDependenceMap,
   getParsedSize,
-  filterChunkDirectlyRequiredModules
+  filterChunkDirectlyRequiredModules,
+  withUnit
 } from './utils';
+import { renderHTML } from './render';
+
+interface AnalyzerOptions {
+  statsFile: string;
+  reportFile: string;
+}
+
+interface AnalyzeOutputOptions {
+  list?: boolean;
+  gt?: number;
+  output?: string[];
+}
+
+export default class Analyzer {
+  private statsData: Stats;
+  private reportData: ReportData;
+  private data: ChunkSizeInfo[];
+
+  constructor(options: AnalyzerOptions) {
+    this.statsData = JSON.parse(
+      readFileSync(path.resolve(options.statsFile), 'utf8')
+    );
+    this.reportData = JSON.parse(
+      readFileSync(path.resolve(options.reportFile), 'utf8')
+    );
+    this.data = getHierarchyData(this.statsData, this.reportData);
+  }
+
+  output(options: AnalyzeOutputOptions): void {
+    if (options.list) {
+      this.outputList(options.gt);
+    } else if (!options.output) {
+      this.outputJSON();
+      return;
+    }
+
+    options.output?.forEach((fileName) => {
+      if (/\.html?$/.test(fileName)) {
+        this.outputHTMLFile(fileName);
+      } else if (/\.json$/.test(fileName)) {
+        this.outputJSONFile(fileName);
+      }
+    });
+  }
+
+  outputList(gt?: number): void {
+    let threshold = 0;
+    if (typeof gt === 'number') {
+      threshold = gt * 1024;
+    }
+    this.data.forEach((chunk) => {
+      if (
+        chunk.children &&
+        chunk.children[0] &&
+        chunk.children[0].totalSize >= threshold
+      ) {
+        outputChunkInfo(chunk);
+        chunk.children
+          .filter(({ totalSize }) => totalSize >= threshold)
+          .forEach(outputDependencyInfo);
+        console.log('');
+      }
+    });
+  }
+
+  outputJSON(): void {
+    console.log(JSON.stringify(this.data, null, 2));
+  }
+
+  outputHTMLFile(fileName: string): void {
+    this.outputFile(fileName, renderHTML(this.data));
+  }
+
+  outputJSONFile(fileName: string): void {
+    this.outputFile(fileName, JSON.stringify(this.data, null, 2));
+  }
+
+  private outputFile(fileName: string, content: string): void {
+    const outputFilePath = path.resolve(fileName);
+    writeFileSync(outputFilePath, content);
+    console.log(
+      chalk.gray('output analyze file:'),
+      chalk.underline.gray(outputFilePath)
+    );
+  }
+}
 
 export function getHierarchyData(
   statsData: Stats,
@@ -42,4 +138,32 @@ export function getHierarchyData(
       };
     })
     .sort((a, b) => b.chunkSize - a.chunkSize);
+}
+
+function outputChunkInfo(chunk: ChunkSizeInfo): void {
+  console.log(
+    chalk.bold.white(chunk.name),
+    chalk.gray('(') +
+      chalk.bold.white(withUnit(chunk.chunkSize)) +
+      chalk.gray(')')
+  );
+  console.log(
+    ' ',
+    'node_modules',
+    `${chalk.gray('(')}${chalk.bold.white(
+      withUnit(chunk.nodeModulesSize)
+    )}, ${chalk.bold.white(
+      ((chunk.nodeModulesSize / chunk.chunkSize) * 100).toFixed(2)
+    )}%${chalk.gray(')')}`
+  );
+}
+function outputDependencyInfo(packageSizeInfo: PackageSizeInfo): void {
+  console.log(
+    '   ',
+    chalk.green('→'),
+    chalk.gray(packageSizeInfo.name),
+    chalk.gray('(') +
+      chalk.white(withUnit(packageSizeInfo.totalSize)) +
+      chalk.gray(')')
+  );
 }

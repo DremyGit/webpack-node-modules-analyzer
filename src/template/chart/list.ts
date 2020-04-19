@@ -63,7 +63,7 @@ export default class ListView {
   private updateTitle(data: ChartDataItem): void {
     this.view.annotation().clear(true);
     this.view.annotation().text({
-      content: data.type === 'chunk' ? 'node_modules' : data.path.join(' > '),
+      content: data.type === 'chunk' ? 'node_modules' : data.name,
       position: ['0%', 2],
       style: {
         fontSize: 18
