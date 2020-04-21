@@ -27,6 +27,7 @@ interface AnalyzerOptions {
 interface AnalyzeOutputOptions {
   list?: boolean;
   gt?: number;
+  module?: string;
   depth?: number;
   output?: string[];
 }
@@ -48,7 +49,11 @@ export default class Analyzer {
 
   output(options: AnalyzeOutputOptions): void {
     if (options.list) {
-      this.outputList(options);
+      if (options.module) {
+        this.outputModule(options);
+      } else {
+        this.outputList(options);
+      }
     } else if (!options.output) {
       this.outputJSON();
       return;
@@ -59,6 +64,23 @@ export default class Analyzer {
         this.outputHTMLFile(fileName);
       } else if (/\.json$/.test(fileName)) {
         this.outputJSONFile(fileName);
+      }
+    });
+  }
+
+  outputModule({
+    module,
+    depth = 1
+  }: {
+    module?: string;
+    depth?: number;
+  }): void {
+    this.data.forEach((chunk) => {
+      const pack = chunk.children.find((dep) => dep.name === module);
+      if (pack) {
+        outputChunkInfo(chunk);
+        outputDependencyInfo([pack], depth);
+        console.log('');
       }
     });
   }

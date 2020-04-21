@@ -38,7 +38,14 @@ const argv = yargs
     alias: 'd',
     number: true,
     default: 1,
+    requiresArg: true,
     description: 'depth of dependency'
+  })
+  .option('module', {
+    alias: 'm',
+    string: true,
+    requiresArg: true,
+    description: 'only output specified module info'
   })
   .help().argv;
 
