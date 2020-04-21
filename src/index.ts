@@ -27,7 +27,7 @@ interface AnalyzerOptions {
 interface AnalyzeOutputOptions {
   list?: boolean;
   gt?: number;
-  depth: number;
+  depth?: number;
   output?: string[];
 }
 
@@ -63,7 +63,7 @@ export default class Analyzer {
     });
   }
 
-  outputList({ gt, depth }: { gt?: number; depth: number }): void {
+  outputList({ gt, depth = 1 }: { gt?: number; depth?: number }): void {
     let threshold = 0;
     if (typeof gt === 'number') {
       threshold = gt * 1024;
