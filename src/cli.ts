@@ -34,6 +34,12 @@ const argv = yargs
     number: true,
     description: '<size>KB Filter list packages which size greater then it'
   })
+  .option('depth', {
+    alias: 'd',
+    number: true,
+    default: 1,
+    description: 'depth of dependency'
+  })
   .help().argv;
 
 new Analyzer({

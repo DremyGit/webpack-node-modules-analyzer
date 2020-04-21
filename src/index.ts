@@ -6,7 +6,8 @@ import {
   ReportData,
   ChunkSizeInfo,
   ReportDataItem,
-  PackageSizeInfo
+  PackageSizeInfo,
+  FileSizeInfo
 } from './types';
 import { Package } from './package';
 import {
@@ -26,6 +27,7 @@ interface AnalyzerOptions {
 interface AnalyzeOutputOptions {
   list?: boolean;
   gt?: number;
+  depth: number;
   output?: string[];
 }
 
@@ -46,7 +48,7 @@ export default class Analyzer {
 
   output(options: AnalyzeOutputOptions): void {
     if (options.list) {
-      this.outputList(options.gt);
+      this.outputList(options);
     } else if (!options.output) {
       this.outputJSON();
       return;
@@ -61,7 +63,7 @@ export default class Analyzer {
     });
   }
 
-  outputList(gt?: number): void {
+  outputList({ gt, depth }: { gt?: number; depth: number }): void {
     let threshold = 0;
     if (typeof gt === 'number') {
       threshold = gt * 1024;
@@ -73,9 +75,7 @@ export default class Analyzer {
         chunk.children[0].totalSize >= threshold
       ) {
         outputChunkInfo(chunk);
-        chunk.children
-          .filter(({ totalSize }) => totalSize >= threshold)
-          .forEach(outputDependencyInfo);
+        outputDependencyInfo(chunk.children, depth);
         console.log('');
       }
     });
@@ -157,13 +157,27 @@ function outputChunkInfo(chunk: ChunkSizeInfo): void {
     )}%${chalk.gray(')')}`
   );
 }
-function outputDependencyInfo(packageSizeInfo: PackageSizeInfo): void {
-  console.log(
-    '   ',
-    chalk.green('→'),
-    chalk.gray(packageSizeInfo.name),
-    chalk.gray('(') +
-      chalk.white(withUnit(packageSizeInfo.totalSize)) +
-      chalk.gray(')')
-  );
+function outputDependencyInfo(
+  dependencies: (PackageSizeInfo | FileSizeInfo)[],
+  maxDepth: number,
+  depth = 1
+): void {
+  dependencies.forEach((dependency) => {
+    if ('totalSize' in dependency) {
+      console.log(
+        Array.from(Array(depth * 3))
+          .map(() => ' ')
+          .join(''),
+        chalk.green('→'),
+        chalk.gray(dependency.name),
+        chalk.gray('(') +
+          chalk.white(withUnit(dependency.totalSize)) +
+          chalk.gray(')')
+      );
+
+      if (depth < maxDepth && Array.isArray(dependency.children)) {
+        outputDependencyInfo(dependency.children, maxDepth, depth + 1);
+      }
+    }
+  });
 }
