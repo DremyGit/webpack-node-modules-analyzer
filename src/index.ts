@@ -133,7 +133,7 @@ export function getHierarchyData(
   const dependencyMap = genDependenceMap(parsedSizeMap, statsData.modules);
 
   return statsData.chunks
-    .map((chunk, index) => {
+    .map((chunk) => {
       const chunkDirectlyRequiredModules = filterChunkDirectlyRequiredModules(
         chunk,
         statsData.modules,
@@ -147,16 +147,24 @@ export function getHierarchyData(
         }).analyzeDependencies(dependencyMap, chunkDirectlyRequiredModules)
       );
 
+      const reportIndex = reportData.findIndex(
+        ({ label }) => label === chunk.files[0]
+      );
+
       return {
         name: chunk.files[0],
-        chunkSize: reportData[index].parsedSize,
+        chunkSize: reportData[reportIndex].parsedSize,
         nodeModulesSize:
-          (reportData[index].groups.find(
+          (reportData[reportIndex].groups.find(
             ({ path }) => path === './node_modules'
           ) as ReportDataItem)?.parsedSize ?? 0,
         children: pageRequirePackages
           .sort((a, b) => b.totalSize - a.totalSize)
           .map((pack) => pack.toHierarchy())
+          .filter(
+            (item, index, arr) =>
+              arr.findIndex(({ name }) => name === item.name) === index
+          )
       };
     })
     .sort((a, b) => b.chunkSize - a.chunkSize);

@@ -1,6 +1,6 @@
 {
   "name": "webpack-node-modules-analyzer",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Analyze node_modules in webpack bundle, and make it visualize",
   "author": "Dremy <dremy@dremy.cn>",
   "license": "MIT",

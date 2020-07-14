@@ -16,6 +16,7 @@ window.onload = (): void => {
     const option = document.createElement('option');
     option.value = index.toString();
     option.innerText = `${chunkData.name} (${withUnit(chunkData.chunkSize)})`;
+    option.disabled = /\.chunk\./.test(chunkData.name);
     select.appendChild(option);
   });
 
