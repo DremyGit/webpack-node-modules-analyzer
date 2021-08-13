@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 import yargs from 'yargs';
 import Analyzer from '.';
+import { SizeType } from './types';
 
 const argv = yargs
   .option('statsData', {
@@ -15,6 +16,18 @@ const argv = yargs
     string: true,
     required: true,
     description: '<filename> Webpack Bundle Analyzer report.json file',
+    requiresArg: true
+  })
+  .option('entry', {
+    alias: 'e',
+    string: true,
+    description: '<filename> Webpack entry file with glob support',
+    requiresArg: true
+  })
+  .option('sizeType', {
+    string: true,
+    description: 'parsedSize or statSize',
+    default: 'parsedSize',
     requiresArg: true
   })
   .option('output', {
@@ -51,5 +64,7 @@ const argv = yargs
 
 new Analyzer({
   statsFile: argv.statsData,
-  reportFile: argv.reportData
+  reportFile: argv.reportData,
+  entry: argv.entry,
+  sizeType: argv.sizeType as SizeType
 }).output(argv);

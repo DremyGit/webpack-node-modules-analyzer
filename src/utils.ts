@@ -1,9 +1,11 @@
+import minimatch from 'minimatch';
 import {
   ReportDataItem,
   Module,
   DependencyMap,
   ReportData,
-  Chunk
+  Chunk,
+  SizeType
 } from './types';
 
 export const nodeModuleRegex = /\/node_modules\//;
@@ -22,7 +24,7 @@ export function genDependenceMap(
       if (list.findIndex(({ name }) => name === module.name) === -1) {
         list.push({
           ...module,
-          size: getParsedSize(parsedSizeMap, module)
+          size: getSize(parsedSizeMap, module)
         });
       }
     });
@@ -44,23 +46,24 @@ export function withUnit(size: number): string {
   return `${s.toFixed(2)} ${units[u]}B`;
 }
 
-export function genParsedSizeMap(
-  reportData: ReportData
+export function genSizeMap(
+  reportData: ReportData,
+  sizeType: SizeType
 ): Record<string, number> {
-  const parsedSizeMap: Record<string, number> = {};
+  const sizeMap: Record<string, number> = {};
   const walk = (chartDataItem: ReportDataItem): void => {
     if (typeof chartDataItem.id === 'number') {
-      parsedSizeMap[chartDataItem.path] = chartDataItem.parsedSize;
+      sizeMap[chartDataItem.path] = chartDataItem[sizeType];
     } else if (Array.isArray(chartDataItem.groups)) {
       chartDataItem.groups.forEach(walk);
     }
   };
 
   reportData.forEach((chunk) => chunk.groups.forEach(walk));
-  return parsedSizeMap;
+  return sizeMap;
 }
 
-export function getParsedSize(
+export function getSize(
   parsedSizeMap: Record<string, number>,
   module: Module
 ): number {
@@ -70,7 +73,8 @@ export function getParsedSize(
 export function filterChunkDirectlyRequiredModules(
   chunk: Chunk,
   modules: Module[],
-  dependencyMap: DependencyMap
+  dependencyMap: DependencyMap,
+  entry?: string
 ): Module[] {
   const requiredNodeModules: Module[] = [];
   const requiredNotNodeModules: Module[] = [];
@@ -100,13 +104,34 @@ export function filterChunkDirectlyRequiredModules(
     });
   };
 
-  const entries = chunk.origins
-    .map(({ request }) =>
-      modules.find(
-        ({ name }) => request && request.indexOf(name.substr(1)) !== -1
+  let entries = [];
+  if (entry) {
+    const entryFiles = minimatch.match(
+      chunk.modules.map(({ name }) => name),
+      entry
+    );
+    console.log('Entry files', entryFiles);
+    entries = chunk.modules.filter(
+      ({ name }) => entryFiles.indexOf(name) !== -1
+    );
+  } else {
+    entries = chunk.origins
+      .map(({ request }) =>
+        modules.find(
+          ({ name }) => request && request.indexOf(name.substr(1)) !== -1
+        )
       )
-    )
-    .filter((entry) => !!entry) as Module[];
+      .filter((entry) => !!entry) as Module[];
+
+    console.log(chunk.origins, entries);
+
+    // if (!entries.length) {
+    //   throw new Error(
+    //     "Can't find entry file automatically, please use -e to set entry file"
+    //   );
+    // }
+  }
+
   walk(entries);
   return requiredNodeModules;
 }

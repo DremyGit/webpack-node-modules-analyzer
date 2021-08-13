@@ -7,13 +7,14 @@ import {
   ChunkSizeInfo,
   ReportDataItem,
   PackageSizeInfo,
-  FileSizeInfo
+  FileSizeInfo,
+  SizeType
 } from './types';
 import { Package } from './package';
 import {
-  genParsedSizeMap,
+  genSizeMap,
   genDependenceMap,
-  getParsedSize,
+  getSize,
   filterChunkDirectlyRequiredModules,
   withUnit
 } from './utils';
@@ -22,6 +23,8 @@ import { renderHTML } from './render';
 interface AnalyzerOptions {
   statsFile: string;
   reportFile: string;
+  entry?: string;
+  sizeType: SizeType;
 }
 
 interface AnalyzeOutputOptions {
@@ -36,6 +39,7 @@ export default class Analyzer {
   private statsData: Stats;
   private reportData: ReportData;
   private data: ChunkSizeInfo[];
+  private sizeType: SizeType;
 
   constructor(options: AnalyzerOptions) {
     this.statsData = JSON.parse(
@@ -44,7 +48,11 @@ export default class Analyzer {
     this.reportData = JSON.parse(
       readFileSync(path.resolve(options.reportFile), 'utf8')
     );
-    this.data = getHierarchyData(this.statsData, this.reportData);
+    this.sizeType = options.sizeType || 'parsedSize';
+    this.data = getHierarchyData(this.statsData, this.reportData, {
+      entry: options.entry,
+      sizeType: this.sizeType
+    });
   }
 
   output(options: AnalyzeOutputOptions): void {
@@ -127,9 +135,13 @@ export default class Analyzer {
 
 export function getHierarchyData(
   statsData: Stats,
-  reportData: ReportData
+  reportData: ReportData,
+  options: {
+    entry?: string;
+    sizeType: SizeType;
+  }
 ): ChunkSizeInfo[] {
-  const parsedSizeMap = genParsedSizeMap(reportData);
+  const parsedSizeMap = genSizeMap(reportData, options.sizeType);
   const dependencyMap = genDependenceMap(parsedSizeMap, statsData.modules);
 
   return statsData.chunks
@@ -137,27 +149,29 @@ export function getHierarchyData(
       const chunkDirectlyRequiredModules = filterChunkDirectlyRequiredModules(
         chunk,
         statsData.modules,
-        dependencyMap
+        dependencyMap,
+        options.entry
       );
 
       const pageRequirePackages = chunkDirectlyRequiredModules.map((module) =>
         new Package({
           ...module,
-          size: getParsedSize(parsedSizeMap, module)
+          size: getSize(parsedSizeMap, module)
         }).analyzeDependencies(dependencyMap, chunkDirectlyRequiredModules)
       );
 
+      let chunkFileIndex = 0;
       const reportIndex = reportData.findIndex(
-        ({ label }) => label === chunk.files[0]
+        ({ label }) => (chunkFileIndex = chunk.files.indexOf(label)) !== -1
       );
 
       return {
-        name: chunk.files[0],
-        chunkSize: reportData[reportIndex].parsedSize,
+        name: chunk.files[chunkFileIndex],
+        chunkSize: reportData[reportIndex][options.sizeType],
         nodeModulesSize:
           (reportData[reportIndex].groups.find(
             ({ path }) => path === './node_modules'
-          ) as ReportDataItem)?.parsedSize ?? 0,
+          ) as ReportDataItem)?.[options.sizeType] ?? 0,
         children: pageRequirePackages
           .sort((a, b) => b.totalSize - a.totalSize)
           .map((pack) => pack.toHierarchy())

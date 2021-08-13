@@ -3,6 +3,7 @@ import { Module, DependencyMap, PackageSizeInfo, FileSizeInfo } from './types';
 const packageNameRegex = /\/node_modules\/((?:@[^/]+?\/)?[^/]+?)\//;
 const buildInModuleRegex = /^\(webpack\)\//;
 const externalModuleRegex = /^external /;
+const ignoredModuleRegex = / \(ignored\)$/;
 
 export class Package {
   public name: string;
@@ -33,13 +34,17 @@ export class Package {
     return this._totalSize;
   }
 
-  constructor(entry: Module) {
+  constructor(entry: Module, name?: string) {
     this.entry = entry;
-    const nameMatch = entry.name.match(packageNameRegex);
-    if (!nameMatch) {
-      throw new Error(`${this.entry.name} is not from a npm module`);
+    if (name) {
+      this.name = name;
+    } else {
+      const nameMatch = this.entry.name.match(packageNameRegex);
+      if (!nameMatch) {
+        throw new Error(`${this.entry.name} is not from a npm module`);
+      }
+      this.name = nameMatch[1];
     }
-    this.name = nameMatch[1];
     this.files = [entry];
   }
 
@@ -67,6 +72,7 @@ export class Package {
         (dependency) =>
           !externalModuleRegex.test(dependency.name) &&
           !buildInModuleRegex.test(dependency.name) &&
+          !ignoredModuleRegex.test(dependency.name) &&
           excludes.findIndex(({ name }) => name === dependency.name) === -1
       )
       .forEach((dependency, index, filtedDependency) => {
@@ -79,11 +85,13 @@ export class Package {
           );
         } else {
           const pack = this.getPackage(dependency);
-          pack.analyzeDependencies(
-            dependencyMap,
-            excludes.concat(filtedDependency)
-          );
-          this.addDependency(pack);
+          if (pack) {
+            pack.analyzeDependencies(
+              dependencyMap,
+              excludes.concat(filtedDependency)
+            );
+            this.addDependency(pack);
+          }
         }
       });
 
@@ -102,13 +110,18 @@ export class Package {
     return nameMatch ? nameMatch[1] === name : false;
   }
 
-  private getPackage(module: Module): Package {
+  private getPackage(module: Module): Package | null {
+    const nameMatch = module.name.match(packageNameRegex);
+    if (!nameMatch) {
+      console.warn(`${module.name} is not from a npm module`);
+      return null;
+    }
     if (!this.dependencies) {
-      return new Package(module);
+      return new Package(module, nameMatch[1]);
     }
     return (
       this.dependencies.find(({ name }) => name === module.name) ||
-      new Package(module)
+      new Package(module, nameMatch[1])
     );
   }
 

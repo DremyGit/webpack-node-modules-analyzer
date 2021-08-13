@@ -78,3 +78,5 @@ export interface ChunkSizeInfo {
   nodeModulesSize: number;
   children: PackageSizeInfo[];
 }
+
+export type SizeType = 'statSize' | 'parsedSize';
