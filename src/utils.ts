@@ -74,7 +74,7 @@ export function filterChunkDirectlyRequiredModules(
   chunk: Chunk,
   modules: Module[],
   dependencyMap: DependencyMap,
-  entry?: string
+  entry?: string | string[]
 ): Module[] {
   const requiredNodeModules: Module[] = [];
   const requiredNotNodeModules: Module[] = [];
@@ -106,10 +106,26 @@ export function filterChunkDirectlyRequiredModules(
 
   let entries = [];
   if (entry) {
-    const entryFiles = minimatch.match(
-      chunk.modules.map(({ name }) => name),
-      entry
-    );
+    let entryFiles: string[] = [];
+    if (Array.isArray(entry)) {
+      entryFiles = entry
+        .reduce(
+          (files, ent) =>
+            files.concat(
+              minimatch.match(
+                chunk.modules.map(({ name }) => name),
+                ent
+              )
+            ),
+          entryFiles
+        )
+        .filter((value, index, list) => list.indexOf(value) === index);
+    } else {
+      entryFiles = minimatch.match(
+        chunk.modules.map(({ name }) => name),
+        entry
+      );
+    }
     console.log('Entry files', entryFiles);
     entries = chunk.modules.filter(
       ({ name }) => entryFiles.indexOf(name) !== -1
