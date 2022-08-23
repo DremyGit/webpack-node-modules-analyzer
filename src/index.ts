@@ -25,6 +25,7 @@ interface AnalyzerOptions {
   reportFile: string;
   entry?: string;
   sizeType: SizeType;
+  maxDepth?: number;
 }
 
 interface AnalyzeOutputOptions {
@@ -51,7 +52,8 @@ export default class Analyzer {
     this.sizeType = options.sizeType || 'parsedSize';
     this.data = getHierarchyData(this.statsData, this.reportData, {
       entry: options.entry,
-      sizeType: this.sizeType
+      sizeType: this.sizeType,
+      maxDepth: options.maxDepth
     });
   }
 
@@ -139,6 +141,7 @@ export function getHierarchyData(
   options: {
     entry?: string;
     sizeType: SizeType;
+    maxDepth?: number;
   }
 ): ChunkSizeInfo[] {
   const parsedSizeMap = genSizeMap(reportData, options.sizeType);
@@ -154,10 +157,13 @@ export function getHierarchyData(
       );
 
       const pageRequirePackages = chunkDirectlyRequiredModules.map((module) =>
-        new Package({
-          ...module,
-          size: getSize(parsedSizeMap, module)
-        }).analyzeDependencies(dependencyMap, chunkDirectlyRequiredModules)
+        new Package(
+          {
+            ...module,
+            size: getSize(parsedSizeMap, module)
+          },
+          options.maxDepth || 10
+        ).analyzeDependencies(dependencyMap, chunkDirectlyRequiredModules)
       );
 
       let chunkFileIndex = 0;

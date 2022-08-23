@@ -34,8 +34,11 @@ export class Package {
     return this._totalSize;
   }
 
-  constructor(entry: Module, name?: string) {
+  private _maxDepth: number;
+
+  constructor(entry: Module, maxDepth: number, name?: string) {
     this.entry = entry;
+    this._maxDepth = maxDepth;
     if (name) {
       this.name = name;
     } else {
@@ -116,12 +119,16 @@ export class Package {
       console.warn(`${module.name} is not from a npm module`);
       return null;
     }
+    const maxDepth = this._maxDepth - 1;
+    if (maxDepth <= 0) {
+      return null;
+    }
     if (!this.dependencies) {
-      return new Package(module, nameMatch[1]);
+      return new Package(module, maxDepth, nameMatch[1]);
     }
     return (
       this.dependencies.find(({ name }) => name === module.name) ||
-      new Package(module, nameMatch[1])
+      new Package(module, maxDepth, nameMatch[1])
     );
   }
 
